@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Footprint Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-globes">
+        <div class="globe g1"></div>
+        <div class="globe g2"></div>
+        <div class="globe g3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Digital <span>Footprint</span> Analyzer</h1>
+            <p>Real-time network surveillance of your local machine</p>
+            <button id="refresh-btn" class="glass-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.44l5.63-5.63"/></svg>
+                Scan Network
+            </button>
+        </header>
+
+        <div class="stats-panel glass-panel">
+            <div class="stat-box">
+                <h3 id="total-conns">0</h3>
+                <p>Active Connections</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="unique-apps">0</h3>
+                <p>Apps Calling Home</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="unique-countries">0</h3>
+                <p>Countries Reached</p>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="connections-list glass-panel">
+                <h2>Live Trace Feed</h2>
+                <div id="conn-feed" class="feed">
+                    <div class="loading-state">Initializing Sensors...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchTraceData() {
+            const feed = document.getElementById('conn-feed');
+            const refreshBtn = document.getElementById('refresh-btn');
+            
+            feed.innerHTML = '<div class="loading-state"><div class="spinner"></div>Analyzing network traffic...</div>';
+            refreshBtn.classList.add('loading');
+            
+            try {
+                const response = await fetch('/api/footprint');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                
+                updateDashboard(data);
+            } catch (error) {
+                feed.innerHTML = `<div class="error-state">Failed to fetch data: ${error.message}</div>`;
+            } finally {
+                refreshBtn.classList.remove('loading');
+            }
+        }
+
+        function updateDashboard(data) {
+            const feed = document.getElementById('conn-feed');
+            feed.innerHTML = '';
+            
+            if (data.length === 0) {
+                feed.innerHTML = '<div class="loading-state">No external connections found right now.</div>';
+                return;
+            }
+            
+            let apps = new Set();
+            let countries = new Set();
+            
+            data.forEach((conn, index) => {
+                apps.add(conn.process_name);
+                if (conn.country && conn.country !== "Unknown") countries.add(conn.country);
+                
+                const delay = index * 0.1;
+                
+                const card = document.createElement('div');
+                card.className = 'trace-card';
+                card.style.animationDelay = `${delay}s`;
+                
+                card.innerHTML = `
+                    <div class="trace-header">
+                        <span class="process-name">${conn.process_name}</span>
+                        <span class="pid">PID: ${conn.pid}</span>
+                    </div>
+                    <div class="trace-body">
+                        <div class="ip-info">
+                            <span class="label">Remote Details:</span>
+                            <span class="value">${conn.remote_ip}:${conn.remote_port}</span>
+                        </div>
+                        <div class="geo-info">
+                            <div class="flag">${getCountryFlag(conn.country)}</div>
+                            <div class="location-details">
+                                <span class="country">${conn.country}</span>
+                                <span class="city">${conn.city || 'Unknown region'} ${conn.isp !== 'Unknown' ? '• ' + conn.isp : ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                feed.appendChild(card);
+            });
+            
+            // Update stats
+            animateValue('total-conns', data.length);
+            animateValue('unique-apps', apps.size);
+            animateValue('unique-countries', countries.size);
+        }
+
+        function getCountryFlag(country) {
+            if (!country || country === 'Unknown') return '🕵️‍♂️';
+            return '📍'; 
+        }
+
+        function animateValue(id, end) {
+            const obj = document.getElementById(id);
+            let current = parseInt(obj.innerText) || 0;
+            const inc = end > current ? 1 : -1;
+            const stepTime = Math.abs(Math.floor(1000 / (end - current))) || 50;
+            
+            if (current === end) return;
+            
+            const timer = setInterval(() => {
+                current += inc;
+                obj.innerText = current;
+                if (current === end) clearInterval(timer);
+            }, stepTime);
+        }
+
+        document.getElementById('refresh-btn').addEventListener('click', fetchTraceData);
+        
+        // Initial fetch
+        fetchTraceData();
+    </script>
+</body>
+</html>
