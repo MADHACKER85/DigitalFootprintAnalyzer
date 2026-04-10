@@ -1,5 +1,6 @@
 import psutil
 import requests
+import socket
 
 def get_active_connections():
     connections = []
@@ -24,11 +25,17 @@ def get_active_connections():
                     except (psutil.NoSuchProcess, psutil.AccessDenied):
                         pass
                 
+                try:
+                    remote_hostname = socket.gethostbyaddr(ip)[0]
+                except Exception:
+                    remote_hostname = "Unknown Host"
+
                 connections.append({
                     "local_ip": conn.laddr.ip if conn.laddr else '',
                     "local_port": conn.laddr.port if conn.laddr else '',
                     "remote_ip": ip,
                     "remote_port": port,
+                    "remote_hostname": remote_hostname,
                     "status": conn.status,
                     "pid": pid,
                     "process_name": process_name

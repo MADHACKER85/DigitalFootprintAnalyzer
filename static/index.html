@@ -100,7 +100,8 @@
                     <div class="trace-body">
                         <div class="ip-info">
                             <span class="label">Remote Details:</span>
-                            <span class="value">${conn.remote_ip}:${conn.remote_port}</span>
+                            <div class="value" style="word-break: break-all; margin-top: 4px;">${conn.remote_hostname && conn.remote_hostname !== 'Unknown Host' ? conn.remote_hostname : conn.remote_ip}</div>
+                            <div style="font-size: 0.85em; opacity: 0.7; margin-top: 2px;">IP: ${conn.remote_ip}:${conn.remote_port}</div>
                         </div>
                         <div class="geo-info">
                             <div class="flag">${getCountryFlag(conn.country)}</div>
